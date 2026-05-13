@@ -1,0 +1,195 @@
+.login {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 280px;
+  max-width: 440px;
+  width: 100%;
+  padding: clamp(2rem, 6vw, 2.75rem) clamp(2rem, 5vw, 2.5rem);
+  border-radius: 28px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 var(--glass-highlight);
+  backdrop-filter: blur(40px) saturate(160%);
+  -webkit-backdrop-filter: blur(40px) saturate(160%);
+  text-align: left;
+  opacity: 0;
+  transform: translateY(16px);
+  animation: login-rise 720ms var(--ease-out-strong) 90ms forwards;
+}
+
+.login__title {
+  margin: 0 0 0.35rem;
+  font-size: 1.375rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+
+.login__hint {
+  margin: 0 0 1.5rem;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.login__username {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.login__email {
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.78);
+  word-break: break-word;
+}
+
+.login__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.login__actions .login__submit {
+  margin-top: 0;
+}
+
+.login__code {
+  font-size: 0.8125rem;
+  padding: 0.12rem 0.35rem;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.login__error {
+  margin: 0 0 1rem;
+  padding: 0.65rem 0.85rem;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: rgba(255, 200, 195, 0.95);
+  background: rgba(180, 60, 70, 0.25);
+  border: 1px solid rgba(255, 140, 140, 0.35);
+  border-radius: 12px;
+}
+
+.login__signout {
+  padding: 0.65rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  font-family: inherit;
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: border-color 180ms var(--ease-out-strong),
+    background-color 180ms var(--ease-out-strong),
+    color 180ms var(--ease-out-strong),
+    transform 140ms var(--ease-out-strong);
+}
+
+.login__signout:hover {
+  color: var(--text-primary);
+  border-color: rgba(255, 255, 255, 0.2);
+  background-color: rgba(255, 255, 255, 0.07);
+}
+
+.login__signout:active {
+  transform: scale(0.98);
+}
+
+.login__signout:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.12);
+}
+
+.login__form {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.login__label {
+  display: block;
+  margin-bottom: 0.4rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text-muted);
+}
+
+.login__input {
+  width: 100%;
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  font-family: inherit;
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 12px;
+  outline: none;
+  transition: border-color 180ms var(--ease-out-strong),
+    background-color 180ms var(--ease-out-strong),
+    box-shadow 180ms var(--ease-out-strong);
+}
+
+.login__input::placeholder {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.login__input:hover {
+  border-color: rgba(255, 255, 255, 0.22);
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.login__input:focus-visible {
+  border-color: rgba(255, 255, 255, 0.38);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.08);
+}
+
+.login__submit {
+  margin-top: 0.25rem;
+  padding: 0.8rem 1.25rem;
+  font-size: 1rem;
+  font-weight: 600;
+  font-family: inherit;
+  letter-spacing: -0.01em;
+  color: rgba(10, 10, 14, 0.92);
+  background: rgba(255, 255, 255, 0.92);
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: transform 140ms var(--ease-out-strong),
+    background-color 180ms var(--ease-out-strong),
+    opacity 180ms var(--ease-out-strong);
+}
+
+.login__submit:hover {
+  background: #fff;
+}
+
+.login__submit:active {
+  transform: scale(0.98);
+}
+
+.login__submit:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.22);
+}
+
+@keyframes login-rise {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
