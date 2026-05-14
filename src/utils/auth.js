@@ -3,12 +3,18 @@
  * Same OAuth shape as the original setup: cognito-idp issuer + scopes you enable on the app client.
  *
  * Env (CRA requires REACT_APP_*):
- *   REACT_APP_COGNITO_USER_POOL_ID, REACT_APP_COGNITO_CLIENT_ID, REACT_APP_COGNITO_REDIRECT_URI
+ *   REACT_APP_COGNITO_USER_POOL_ID, REACT_APP_COGNITO_CLIENT_ID
+ *   REACT_APP_COGNITO_REDIRECT_URI — fallback when `window` is missing (tests); in the browser the
+ *   actual redirect_uri is always `window.location.origin` so it matches the URL Cognito returns to
+ *   (avoids invalid_grant when PORT differs from .env).
  * Optional: REACT_APP_COGNITO_SCOPE — defaults to "phone openid email" (original).
  *
  * If you see ?error=invalid_request&error_description=invalid_scope: every scope in the request
  * must be checked under Cognito → App client → Hosted UI → OpenID Connect scopes (or use a smaller
  * REACT_APP_COGNITO_SCOPE, e.g. "openid email").
+ *
+ * React 18 Strict Mode runs effects twice in dev; without guarding, two parallel `signinCallback`
+ * calls reuse the same ?code= and the second POST to /oauth2/token fails with invalid_grant.
  */
 
 import { UserManager } from 'oidc-client-ts';
@@ -19,6 +25,9 @@ import { UserManager } from 'oidc-client-ts';
 let userManager = null;
 /** @type {string | null} */
 let userManagerScopeKey = null;
+
+/** Single in-flight OAuth code exchange (Strict Mode / concurrent getSession). */
+let signinCodeExchangePromise = null;
 
 /** Original default — match App client “Allowed OAuth scopes” in the console. */
 const DEFAULT_COGNITO_SCOPE = 'phone openid email';
@@ -33,14 +42,43 @@ export function cognitoIssuerUrl(userPoolId) {
   return `https://cognito-idp.${region}.amazonaws.com/${userPoolId}`;
 }
 
+/**
+ * Callback and sign-out URLs must exactly match entries in the Cognito app client
+ * (Allowed callback URLs / Allowed sign-out URLs). In the browser we use the current origin
+ * so the port and host match the running dev server.
+ */
+function resolveRedirectUris() {
+  const envRedirect = (process.env.REACT_APP_COGNITO_REDIRECT_URI || '').trim();
+  const envLogout = (process.env.REACT_APP_COGNITO_LOGOUT_REDIRECT_URI || '').trim();
+
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    const origin = window.location.origin;
+    return {
+      redirectUri: origin,
+      logoutRedirectUri: envLogout || origin,
+    };
+  }
+
+  if (!envRedirect) {
+    throw new Error(
+      'Set REACT_APP_COGNITO_REDIRECT_URI in .env (required when window is unavailable, e.g. some tests).'
+    );
+  }
+
+  return {
+    redirectUri: envRedirect,
+    logoutRedirectUri: envLogout || envRedirect,
+  };
+}
+
 function readEnv() {
   const userPoolId = process.env.REACT_APP_COGNITO_USER_POOL_ID;
   const clientId = process.env.REACT_APP_COGNITO_CLIENT_ID;
-  const redirectUri = process.env.REACT_APP_COGNITO_REDIRECT_URI;
+  const { redirectUri, logoutRedirectUri } = resolveRedirectUris();
 
-  if (!userPoolId || !clientId || !redirectUri) {
+  if (!userPoolId || !clientId) {
     throw new Error(
-      'Set REACT_APP_COGNITO_USER_POOL_ID, REACT_APP_COGNITO_CLIENT_ID, and REACT_APP_COGNITO_REDIRECT_URI in .env (CRA requires the REACT_APP_ prefix).'
+      'Set REACT_APP_COGNITO_USER_POOL_ID and REACT_APP_COGNITO_CLIENT_ID in .env (CRA requires the REACT_APP_ prefix).'
     );
   }
 
@@ -56,7 +94,7 @@ function readEnv() {
       /\/$/,
       ''
     ),
-    logoutRedirectUri: process.env.REACT_APP_COGNITO_LOGOUT_REDIRECT_URI,
+    logoutRedirectUri,
   };
 }
 
@@ -119,7 +157,8 @@ function formatUser(user) {
     accessToken: user.access_token,
     authorizationHeaders: (contentType = 'application/json') => ({
       'Content-Type': contentType,
-      Authorization: `Bearer ${user.access_token}`,
+      // fragments API verifies Cognito *identity* tokens (tokenUse: 'id'), not access tokens
+      Authorization: `Bearer ${user.id_token}`,
     }),
   };
 }
@@ -144,14 +183,21 @@ async function loadUserAfterOAuthHandling(mgr) {
   const search = window.location.search || '';
 
   if (/\bcode=/.test(search)) {
-    try {
-      const signedIn = await mgr.signinCallback(window.location.href);
-      window.history.replaceState({}, document.title, window.location.pathname);
-      return signedIn ? formatUser(signedIn) : null;
-    } catch (err) {
-      console.error('Cognito sign-in callback failed', err);
-      return null;
+    if (!signinCodeExchangePromise) {
+      signinCodeExchangePromise = (async () => {
+        try {
+          const signedIn = await mgr.signinCallback(window.location.href);
+          window.history.replaceState({}, document.title, window.location.pathname);
+          return signedIn ? formatUser(signedIn) : null;
+        } catch (err) {
+          console.error('Cognito sign-in callback failed', err);
+          return null;
+        } finally {
+          signinCodeExchangePromise = null;
+        }
+      })();
     }
+    return signinCodeExchangePromise;
   }
 
   const stored = await mgr.getUser();

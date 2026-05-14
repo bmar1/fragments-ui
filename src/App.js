@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import Login from './components/Login';
 import SignedInPanel from './components/SignedInPanel';
+import { getUserFragments } from './api';
 import { getSession, signOut } from './utils/auth';
 import './App.css';
 
@@ -53,6 +54,13 @@ function App() {
           user
         );
         setSession(user);
+
+        try {
+          const fragments = await getUserFragments(user);
+          console.info('[Fragments] GET /v1/fragments succeeded', fragments);
+        } catch (err) {
+          console.error('[Fragments] GET /v1/fragments failed', err);
+        }
       } catch (err) {
         console.error('[Fragments] Auth bootstrap failed', err);
       } finally {

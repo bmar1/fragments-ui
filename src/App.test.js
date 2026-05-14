@@ -4,15 +4,23 @@ jest.mock('./utils/auth', () => ({
   signOut: jest.fn(() => Promise.resolve(false)),
 }));
 
+jest.mock('./api', () => ({
+  getUserFragments: jest.fn(() =>
+    Promise.resolve({ status: 'ok', fragments: [] })
+  ),
+}));
+
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from './App';
+import { getUserFragments } from './api';
 import { getSession, signIn, signOut } from './utils/auth';
 
 beforeEach(() => {
   getSession.mockResolvedValue({ user: null });
   signIn.mockResolvedValue(undefined);
   signOut.mockResolvedValue(false);
+  getUserFragments.mockResolvedValue({ status: 'ok', fragments: [] });
 });
 
 test('renders welcome intro after auth check', async () => {
