@@ -32,6 +32,86 @@ let signinCodeExchangePromise = null;
 /** Original default — match App client “Allowed OAuth scopes” in the console. */
 const DEFAULT_COGNITO_SCOPE = 'phone openid email';
 
+/** Cognito often uses an opaque UUID for `cognito:username`; avoid showing that or `sub` when we have a real name or email. */
+function isUuidLike(value) {
+  return (
+    typeof value === 'string' &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      value.trim()
+    )
+  );
+}
+
+/** @returns {Record<string, unknown>} */
+function decodeIdTokenPayload(idToken) {
+  if (!idToken || typeof idToken !== 'string') return {};
+  const parts = idToken.split('.');
+  if (parts.length < 2) return {};
+  try {
+    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=');
+    return JSON.parse(atob(padded));
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * @param {Record<string, unknown>} claims merged profile + ID token (+ optional UserInfo) claims
+ */
+function pickDisplayUsername(claims) {
+  const name =
+    (typeof claims.name === 'string' && claims.name.trim()) ||
+    [
+      typeof claims.given_name === 'string' ? claims.given_name.trim() : '',
+      typeof claims.family_name === 'string' ? claims.family_name.trim() : '',
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .trim() ||
+    (typeof claims.nickname === 'string' && claims.nickname.trim());
+  if (name) return name;
+
+  if (typeof claims.email === 'string' && claims.email.includes('@')) {
+    const local = claims.email.split('@')[0].trim();
+    if (local) return local;
+  }
+
+  const cognitoUser = claims['cognito:username'];
+  if (typeof cognitoUser === 'string' && cognitoUser.trim() && !isUuidLike(cognitoUser)) {
+    return cognitoUser.trim();
+  }
+
+  // UserInfo endpoint often exposes `username` (distinct from cognito:username)
+  const userInfoUsername = claims.username;
+  if (
+    typeof userInfoUsername === 'string' &&
+    userInfoUsername.trim() &&
+    !isUuidLike(userInfoUsername)
+  ) {
+    return userInfoUsername.trim();
+  }
+
+  const preferred = claims.preferred_username;
+  if (typeof preferred === 'string' && preferred.trim() && !isUuidLike(preferred)) {
+    return preferred.trim();
+  }
+
+  if (typeof claims.phone_number === 'string' && claims.phone_number.trim()) {
+    return claims.phone_number.trim();
+  }
+
+  if (typeof claims.email === 'string' && claims.email.trim()) {
+    return claims.email.trim();
+  }
+
+  if (typeof claims.sub === 'string' && claims.sub.length >= 8) {
+    return `User (${claims.sub.slice(0, 8)}…)`;
+  }
+
+  return 'User';
+}
+
 export function cognitoIssuerUrl(userPoolId) {
   if (!userPoolId || typeof userPoolId !== 'string' || !userPoolId.includes('_')) {
     throw new Error(
@@ -109,6 +189,8 @@ export function getUserManager() {
       redirect_uri: env.redirectUri,
       response_type: 'code',
       scope: env.scope,
+      // Merge OpenID UserInfo (adds `username`, etc.) when the ID token is sparse
+      loadUserInfo: true,
       automaticSilentRenew: false,
       revokeTokenTypes: ['refresh_token'],
     });
@@ -144,15 +226,15 @@ export async function signOut() {
 
 function formatUser(user) {
   const profile = user.profile || {};
-  const username =
-    profile['cognito:username'] ||
-    profile.preferred_username ||
-    (typeof profile.email === 'string' ? profile.email.split('@')[0] : null) ||
-    profile.sub;
+  const idClaims = decodeIdTokenPayload(user.id_token);
+  const merged = { ...idClaims, ...profile };
+  const username = pickDisplayUsername(merged);
+  const email =
+    typeof merged.email === 'string' ? merged.email : undefined;
 
   return {
     username,
-    email: profile.email,
+    email,
     idToken: user.id_token,
     accessToken: user.access_token,
     authorizationHeaders: (contentType = 'application/json') => ({
