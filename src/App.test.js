@@ -8,6 +8,13 @@ jest.mock('./api', () => ({
   getUserFragments: jest.fn(() =>
     Promise.resolve({ status: 'ok', fragments: [] })
   ),
+  createFragment: jest.fn(() =>
+    Promise.resolve({
+      location: 'http://localhost:8080/v1/fragments/test-id',
+      data: { status: 'ok', fragment: { id: 'test-id' } },
+    })
+  ),
+  getFragmentsApiUrl: jest.fn(() => 'http://localhost:8080'),
 }));
 
 import { render, screen, waitFor } from '@testing-library/react';
@@ -76,6 +83,7 @@ test('greets by username when Cognito session exists', async () => {
   });
 
   expect(screen.getByText(/hello again/i)).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: /your fragments/i })).toBeInTheDocument();
   expect(
     screen.queryByRole('heading', { name: /sign in/i })
   ).not.toBeInTheDocument();

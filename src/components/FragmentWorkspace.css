@@ -1,0 +1,135 @@
+.workspace {
+  width: 100%;
+  max-width: 28rem;
+}
+
+.workspace__title {
+  margin: 0 0 0.5rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.workspace__hint {
+  margin: 0 0 1rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.workspace__error {
+  margin: 0 0 1rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 0.5rem;
+  background: rgba(255, 90, 90, 0.12);
+  border: 1px solid rgba(255, 120, 120, 0.35);
+  color: #ffb4b4;
+  font-size: 0.875rem;
+}
+
+.workspace__form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.workspace__label {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.workspace__textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border-radius: 0.6rem;
+  border: 1px solid var(--glass-border);
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--text-primary);
+  font: inherit;
+  resize: vertical;
+  min-height: 5rem;
+}
+
+.workspace__textarea:focus {
+  outline: 2px solid rgba(255, 255, 255, 0.25);
+  outline-offset: 2px;
+}
+
+.workspace__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.workspace__result {
+  margin-bottom: 1.25rem;
+  padding: 0.85rem;
+  border-radius: 0.6rem;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+}
+
+.workspace__result-title {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.workspace__meta {
+  margin: 0 0 0.5rem;
+  font-size: 0.8rem;
+}
+
+.workspace__meta-label {
+  display: block;
+  margin-bottom: 0.25rem;
+  color: var(--text-muted);
+}
+
+.workspace__code {
+  font-family: ui-monospace, monospace;
+  font-size: 0.8rem;
+  color: rgba(200, 220, 255, 0.95);
+}
+
+.workspace__code--block {
+  display: block;
+  word-break: break-all;
+}
+
+.workspace__json {
+  margin: 0;
+  padding: 0.65rem;
+  border-radius: 0.4rem;
+  background: rgba(0, 0, 0, 0.4);
+  font-size: 0.72rem;
+  line-height: 1.4;
+  overflow-x: auto;
+  color: rgba(220, 230, 255, 0.9);
+}
+
+.workspace__list-title {
+  margin: 0 0 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.workspace__empty {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.workspace__ids {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}

@@ -85,10 +85,6 @@ function App() {
     }
   }, []);
 
-  const handleContinue = useCallback(() => {
-    /* Hook for navigation into the main app */
-  }, []);
-
   const headline = session ? `${greeting}, ${session.username}` : greeting;
 
   if (!authReady) {
@@ -136,7 +132,7 @@ function App() {
           <SignedInPanel
             username={session.username}
             email={session.email}
-            onContinue={handleContinue}
+            user={session}
             onSignOut={handleSignOut}
           />
         ) : (
