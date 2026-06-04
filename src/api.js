@@ -26,9 +26,18 @@ async function parseErrorResponse(res) {
 /**
  * @param {{ authorizationHeaders: (contentType?: string) => Record<string, string> }} user
  */
+async function apiFetch(url, options) {
+  try {
+    return await fetch(url, options);
+  } catch (err) {
+    const hint = `Cannot reach API at ${fragmentsBaseUrl}. Check REACT_APP_FRAGMENTS_API_URL, EC2 security group (port 8080), and that the server is running.`;
+    throw new Error(err instanceof Error ? `${err.message} — ${hint}` : hint);
+  }
+}
+
 export async function getUserFragments(user) {
   const fragmentsUrl = new URL('/v1/fragments', `${fragmentsBaseUrl}/`);
-  const res = await fetch(fragmentsUrl, {
+  const res = await apiFetch(fragmentsUrl, {
     headers: user.authorizationHeaders(),
   });
   if (!res.ok) {
@@ -45,7 +54,7 @@ export async function getUserFragments(user) {
  */
 export async function createFragment(user, text) {
   const fragmentsUrl = new URL('/v1/fragments', `${fragmentsBaseUrl}/`);
-  const res = await fetch(fragmentsUrl, {
+  const res = await apiFetch(fragmentsUrl, {
     method: 'POST',
     headers: user.authorizationHeaders('text/plain'),
     body: text,
