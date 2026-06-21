@@ -1,13 +1,40 @@
 import { useState, useEffect, useCallback } from 'react';
-import { createFragment, getUserFragments } from '../api';
+import { createFragment, getUserFragments, FRAGMENT_TYPES } from '../api';
 import './FragmentWorkspace.css';
 
+function validateContent(contentType, content) {
+  if (!content.trim()) {
+    return 'Enter some content for your fragment.';
+  }
+  if (contentType === 'application/json') {
+    try {
+      JSON.parse(content);
+    } catch {
+      return 'Content must be valid JSON for application/json fragments.';
+    }
+  }
+  return null;
+}
+
+function formatFragmentRow(fragment) {
+  if (typeof fragment === 'string') {
+    return { id: fragment, type: '—', size: '—', updated: '—' };
+  }
+  return {
+    id: fragment.id,
+    type: fragment.type || '—',
+    size: fragment.size ?? '—',
+    updated: fragment.updated || fragment.created || '—',
+  };
+}
+
 /**
- * Manual test UI: create text/plain fragments and list IDs from the API.
+ * Manual test UI: create fragments and list metadata from the API.
  */
 export default function FragmentWorkspace({ user }) {
-  const [text, setText] = useState('');
-  const [fragmentIds, setFragmentIds] = useState([]);
+  const [contentType, setContentType] = useState('text/plain');
+  const [content, setContent] = useState('');
+  const [fragments, setFragments] = useState([]);
   const [busy, setBusy] = useState(false);
   const [listBusy, setListBusy] = useState(false);
   const [error, setError] = useState(null);
@@ -18,7 +45,7 @@ export default function FragmentWorkspace({ user }) {
     setError(null);
     try {
       const result = await getUserFragments(user);
-      setFragmentIds(result.fragments || []);
+      setFragments(result.fragments || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not load fragments.');
     } finally {
@@ -32,9 +59,9 @@ export default function FragmentWorkspace({ user }) {
 
   async function handleCreate(event) {
     event.preventDefault();
-    const trimmed = text.trim();
-    if (!trimmed) {
-      setError('Enter some text for your fragment.');
+    const validationError = validateContent(contentType, content);
+    if (validationError) {
+      setError(validationError);
       return;
     }
 
@@ -43,9 +70,9 @@ export default function FragmentWorkspace({ user }) {
     setLastCreated(null);
 
     try {
-      const result = await createFragment(user, trimmed);
+      const result = await createFragment(user, contentType, content);
       setLastCreated(result);
-      setText('');
+      setContent('');
       await refreshList();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not create fragment.');
@@ -54,14 +81,17 @@ export default function FragmentWorkspace({ user }) {
     }
   }
 
+  const rows = fragments.map(formatFragmentRow);
+
   return (
     <section className="workspace" aria-labelledby="workspace-heading">
       <h2 id="workspace-heading" className="workspace__title">
         Your fragments
       </h2>
       <p className="workspace__hint">
-        Create a <code className="workspace__code">text/plain</code> fragment. It is
-        sent to the API with your Cognito identity token.
+        Create a fragment by choosing a type and entering content. Supports{' '}
+        <code className="workspace__code">text/*</code> and{' '}
+        <code className="workspace__code">application/json</code>.
       </p>
 
       {error ? (
@@ -71,18 +101,40 @@ export default function FragmentWorkspace({ user }) {
       ) : null}
 
       <form className="workspace__form" onSubmit={handleCreate}>
-        <label className="workspace__label" htmlFor="fragment-text">
-          Fragment text
+        <label className="workspace__label" htmlFor="fragment-type">
+          Fragment type
+        </label>
+        <select
+          id="fragment-type"
+          className="workspace__select"
+          value={contentType}
+          onChange={(e) => setContentType(e.target.value)}
+          disabled={busy}
+        >
+          {FRAGMENT_TYPES.map((type) => (
+            <option key={type.value} value={type.value}>
+              {type.label}
+            </option>
+          ))}
+        </select>
+
+        <label className="workspace__label" htmlFor="fragment-content">
+          Fragment content
         </label>
         <textarea
-          id="fragment-text"
+          id="fragment-content"
           className="workspace__textarea"
-          rows={4}
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="Type something to store as a fragment…"
+          rows={5}
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          placeholder={
+            contentType === 'application/json'
+              ? '{"message": "hello"}'
+              : 'Type something to store as a fragment…'
+          }
           disabled={busy}
         />
+
         <div className="workspace__actions">
           <button type="submit" className="login__submit" disabled={busy}>
             {busy ? 'Creating…' : 'Create fragment'}
@@ -116,17 +168,32 @@ export default function FragmentWorkspace({ user }) {
       ) : null}
 
       <div className="workspace__list">
-        <h3 className="workspace__list-title">Fragment IDs</h3>
-        {fragmentIds.length === 0 ? (
+        <h3 className="workspace__list-title">Your fragments (metadata)</h3>
+        {rows.length === 0 ? (
           <p className="workspace__empty">No fragments yet — create one above.</p>
         ) : (
-          <ul className="workspace__ids">
-            {fragmentIds.map((id) => (
-              <li key={id}>
-                <code className="workspace__code">{id}</code>
-              </li>
-            ))}
-          </ul>
+          <table className="workspace__table">
+            <thead>
+              <tr>
+                <th scope="col">ID</th>
+                <th scope="col">Type</th>
+                <th scope="col">Size</th>
+                <th scope="col">Updated</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.id}>
+                  <td>
+                    <code className="workspace__code">{row.id}</code>
+                  </td>
+                  <td>{row.type}</td>
+                  <td>{row.size}</td>
+                  <td>{row.updated}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         )}
       </div>
     </section>

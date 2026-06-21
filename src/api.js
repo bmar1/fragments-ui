@@ -1,14 +1,17 @@
 /**
  * Call the fragments microservice from the browser.
  * CRA only exposes env vars prefixed with REACT_APP_*.
- *
- * Set REACT_APP_FRAGMENTS_API_URL to your API (localhost or EC2), e.g.:
- *   http://ec2-xx-xx-xx-xx.compute-1.amazonaws.com:8080
  */
 
 const fragmentsBaseUrl =
   (process.env.REACT_APP_FRAGMENTS_API_URL || '').replace(/\/$/, '') ||
   'http://localhost:8080';
+
+export const FRAGMENT_TYPES = [
+  { value: 'text/plain', label: 'Plain text (text/plain)' },
+  { value: 'text/markdown', label: 'Markdown (text/markdown)' },
+  { value: 'application/json', label: 'JSON (application/json)' },
+];
 
 async function parseErrorResponse(res) {
   const text = await res.text();
@@ -35,8 +38,13 @@ async function apiFetch(url, options) {
   }
 }
 
+/**
+ * List fragments for the signed-in user (metadata when expand=1).
+ * @param {{ authorizationHeaders: (contentType?: string) => Record<string, string> }} user
+ */
 export async function getUserFragments(user) {
   const fragmentsUrl = new URL('/v1/fragments', `${fragmentsBaseUrl}/`);
+  fragmentsUrl.searchParams.set('expand', '1');
   const res = await apiFetch(fragmentsUrl, {
     headers: user.authorizationHeaders(),
   });
@@ -47,17 +55,17 @@ export async function getUserFragments(user) {
 }
 
 /**
- * Create a plain text fragment.
+ * Create a fragment with the given content type and body.
  * @param {{ authorizationHeaders: (contentType?: string) => Record<string, string> }} user
- * @param {string} text
- * @returns {Promise<{ data: object, location: string | null }>}
+ * @param {string} contentType
+ * @param {string} body
  */
-export async function createFragment(user, text) {
+export async function createFragment(user, contentType, body) {
   const fragmentsUrl = new URL('/v1/fragments', `${fragmentsBaseUrl}/`);
   const res = await apiFetch(fragmentsUrl, {
     method: 'POST',
-    headers: user.authorizationHeaders('text/plain'),
-    body: text,
+    headers: user.authorizationHeaders(contentType),
+    body,
   });
   if (!res.ok) {
     throw new Error(await parseErrorResponse(res));
